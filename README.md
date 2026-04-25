@@ -20,6 +20,7 @@ npm install
 cp .env.example .env
 # Edit DATABASE_URL, JWT_SECRET, AUTH_USERNAME, and AUTH_PASSWORD in .env
 npm run migrate
+npm run seed
 npm run dev
 ```
 
@@ -31,7 +32,7 @@ Hosted API:
 https://smart-logistics-api-nrfd.onrender.com
 ```
 
-Optional seed data is available in `seed.sql` and can be loaded with `psql` after migrations.
+Optional seed data is available in `seed.sql`. Run `npm run seed` after migrations to create 10 warehouses, 30 items, and 30 inventory item rows per warehouse.
 
 Useful URLs:
 
