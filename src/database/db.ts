@@ -4,7 +4,8 @@ import { config } from "../config/index.js";
 export type DbClient = Pick<PoolClient, "query">;
 
 export const pool = new Pool({
-  connectionString: config.databaseUrl
+  connectionString: config.databaseUrl,
+  ssl: config.databaseSsl ? { rejectUnauthorized: false } : undefined
 });
 
 export async function withTransaction<T>(

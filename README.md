@@ -23,15 +23,21 @@ npm run migrate
 npm run dev
 ```
 
-The API starts on `http://localhost:3000` by default.
+The API starts on `http://localhost:3000` by default for local development.
+
+Hosted API:
+
+```txt
+https://smart-logistics-api-nrfd.onrender.com
+```
 
 Optional seed data is available in `seed.sql` and can be loaded with `psql` after migrations.
 
 Useful URLs:
 
-- Health: `GET /health`
-- Swagger UI: `GET /docs`
-- OpenAPI JSON: `GET /openapi.json`
+- Health: `GET https://smart-logistics-api-nrfd.onrender.com/health`
+- Swagger UI: `https://smart-logistics-api-nrfd.onrender.com/docs`
+- OpenAPI JSON: `GET https://smart-logistics-api-nrfd.onrender.com/openapi.json`
 
 The repository also includes a static OpenAPI submission artifact at `docs/openapi.json`.
 
@@ -40,6 +46,7 @@ Protected endpoints require `Authorization: Bearer <access-token>`. Public endpo
 Required environment variables:
 
 - `DATABASE_URL`
+- `DATABASE_SSL` optional, set to `true` when using Render's external PostgreSQL URL
 - `JWT_SECRET`
 - `AUTH_USERNAME`
 - `AUTH_PASSWORD`
@@ -89,7 +96,7 @@ All errors use the same shape:
 Get a JWT:
 
 ```bash
-curl -X POST http://localhost:3000/auth/token \
+curl -X POST https://smart-logistics-api-nrfd.onrender.com/auth/token \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"change-me"}'
 ```
@@ -99,7 +106,7 @@ Use the returned `accessToken` as a Bearer token for warehouse, item, and invent
 Create a warehouse:
 
 ```bash
-curl -X POST http://localhost:3000/warehouses \
+curl -X POST https://smart-logistics-api-nrfd.onrender.com/warehouses \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <access-token>" \
   -d '{"name":"Cold Manila","location":"Manila","maxCapacity":100,"type":"COLD"}'
@@ -108,7 +115,7 @@ curl -X POST http://localhost:3000/warehouses \
 Create an item:
 
 ```bash
-curl -X POST http://localhost:3000/items \
+curl -X POST https://smart-logistics-api-nrfd.onrender.com/items \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <access-token>" \
   -d '{"name":"Ice Cream","sku":"ICE-12345-C","storageRequirement":"COLD"}'
@@ -117,7 +124,7 @@ curl -X POST http://localhost:3000/items \
 Add inventory:
 
 ```bash
-curl -X POST http://localhost:3000/inventory/add \
+curl -X POST https://smart-logistics-api-nrfd.onrender.com/inventory/add \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <access-token>" \
   -d '{"warehouseId":"<warehouse-id>","sku":"ICE-12345-C","quantity":25}'
@@ -126,7 +133,7 @@ curl -X POST http://localhost:3000/inventory/add \
 Transfer inventory:
 
 ```bash
-curl -X POST http://localhost:3000/inventory/transfer \
+curl -X POST https://smart-logistics-api-nrfd.onrender.com/inventory/transfer \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <access-token>" \
   -d '{"fromWarehouseId":"<source-id>","toWarehouseId":"<destination-id>","sku":"ICE-12345-C","quantity":5}'
@@ -135,14 +142,14 @@ curl -X POST http://localhost:3000/inventory/transfer \
 Inventory report:
 
 ```bash
-curl "http://localhost:3000/inventory/report?warehousePage=1&warehousesPerPage=50&warehouseItemPage=1&warehouseItemsPerPage=50" \
+curl "https://smart-logistics-api-nrfd.onrender.com/inventory/report?warehousePage=1&warehousesPerPage=50&warehouseItemPage=1&warehouseItemsPerPage=50" \
   -H "Authorization: Bearer <access-token>"
 ```
 
 Delete an empty warehouse:
 
 ```bash
-curl -X DELETE http://localhost:3000/warehouses/<warehouse-id> \
+curl -X DELETE https://smart-logistics-api-nrfd.onrender.com/warehouses/<warehouse-id> \
   -H "Authorization: Bearer <access-token>"
 ```
 
@@ -151,7 +158,8 @@ curl -X DELETE http://localhost:3000/warehouses/<warehouse-id> \
 For Render, Railway, Fly.io, or Heroku:
 
 1. Provision a PostgreSQL database.
-2. Set `DATABASE_URL`, `PORT`, `NODE_ENV=production`, `JWT_SECRET`, `AUTH_USERNAME`, and `AUTH_PASSWORD`.
-3. Run `npm run build`.
-4. Run `npm run migrate`.
-5. Start with `npm start`.
+2. Set `DATABASE_URL`, `DATABASE_SSL=true`, `PORT`, `NODE_ENV=production`, `JWT_SECRET`, `AUTH_USERNAME`, and `AUTH_PASSWORD`.
+3. Use `npm ci --include=dev && npm run build` as the build command.
+4. Use `npm run migrate:prod && npm start` as the start command, or run `npm run migrate:prod` once before `npm start`.
+
+For Render specifically, `render.yaml` is included with the correct build and start commands.

@@ -9,6 +9,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "migrate": "tsx src/database/migrate.ts",
+    "migrate:prod": "node dist/database/migrate.js",
     "test": "vitest run"
   },
   "keywords": [

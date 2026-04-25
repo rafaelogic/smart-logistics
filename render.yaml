@@ -3,7 +3,7 @@ services:
     name: smart-logistics-api
     runtime: node
     buildCommand: npm ci --include=dev && npm run build
-    startCommand: npm start
+    startCommand: npm run migrate:prod && npm start
     envVars:
       - key: NODE_ENV
         value: production
