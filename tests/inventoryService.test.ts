@@ -1,8 +1,8 @@
 import { newDb } from "pg-mem";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Pool, PoolClient } from "pg";
-import { addInventory, transferInventory } from "../src/services/inventoryService.js";
-import { transferInventorySchema } from "../src/validations/schemas.js";
+import { addInventory, setInventory, transferInventory } from "../src/services/inventoryService.js";
+import { addInventorySchema, setInventorySchema, transferInventorySchema } from "../src/validations/schemas.js";
 
 const standardA = "00000000-0000-0000-0000-000000000001";
 const standardB = "00000000-0000-0000-0000-000000000002";
@@ -165,6 +165,31 @@ describe("transferInventory", () => {
 });
 
 describe("addInventory", () => {
+  it("rejects negative quantities before add logic runs", () => {
+    const result = addInventorySchema.safeParse({
+      warehouseId: standardA,
+      sku: "RIC-12345-A",
+      quantity: -1
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe("Quantity must be greater than 0");
+  });
+
+  it("prevents adding stock when warehouse capacity would be exceeded", async () => {
+    await expect(
+      withTestTransaction((client) =>
+        addInventory(client, {
+          warehouseId: standardB,
+          sku: "RIC-12345-A",
+          quantity: 6
+        })
+      )
+    ).rejects.toMatchObject({ error: "INSUFFICIENT_CAPACITY" });
+
+    expect(await getQuantity(standardB, standardItem)).toBe(15);
+  });
+
   it("prevents adding cold stock to standard warehouses", async () => {
     await expect(
       withTestTransaction((client) =>
@@ -175,5 +200,22 @@ describe("addInventory", () => {
         })
       )
     ).rejects.toMatchObject({ error: "INCOMPATIBLE_STORAGE" });
+  });
+});
+
+describe("setInventory", () => {
+  it("rejects negative quantities but allows zero", async () => {
+    expect(setInventorySchema.safeParse({ quantity: -1 }).success).toBe(false);
+    expect(setInventorySchema.safeParse({ quantity: 0 }).success).toBe(true);
+
+    await withTestTransaction((client) =>
+      setInventory(client, {
+        warehouseId: standardA,
+        sku: "RIC-12345-A",
+        quantity: 0
+      })
+    );
+
+    expect(await getQuantity(standardA, standardItem)).toBe(0);
   });
 });

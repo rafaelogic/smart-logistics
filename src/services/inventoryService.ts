@@ -3,9 +3,11 @@ import { ApiError } from "../middlewares/errorMiddleware.js";
 import {
   decrementInventoryQuantity,
   deleteZeroQuantityInventory,
+  deleteInventoryRecord,
   getInventoryQuantityForUpdate,
   getWarehouseInventoryReportRecords,
-  incrementInventoryQuantity
+  incrementInventoryQuantity,
+  setInventoryQuantity
 } from "../repositories/inventoryRepository.js";
 import { findActiveItemBySku } from "../repositories/itemRepository.js";
 import type { ItemRecord, WarehouseRecord } from "../repositories/types.js";
@@ -91,6 +93,43 @@ export async function addInventory(
     sku: item.sku,
     quantity: occupancy + input.quantity
   };
+}
+
+export async function setInventory(
+  client: PoolClient,
+  input: { warehouseId: string; sku: string; quantity: number }
+): Promise<InventoryMutationResult> {
+  const warehouse = await getRequiredLockedWarehouse(client, input.warehouseId);
+  const item = await getRequiredItemBySku(client, input.sku);
+  assertStorageCompatible(warehouse, item);
+
+  const currentQuantity = await getInventoryQuantityForUpdate(client, warehouse.id, item.id);
+  const occupancy = await getWarehouseOccupancy(client, warehouse.id);
+  const nextOccupancy = occupancy - currentQuantity + input.quantity;
+  if (nextOccupancy > warehouse.max_capacity) {
+    throw new ApiError("INSUFFICIENT_CAPACITY", "Updated quantity exceeds warehouse capacity.", 422);
+  }
+
+  await setInventoryQuantity(client, warehouse.id, item.id, input.quantity);
+  await deleteZeroQuantityInventory(client);
+
+  return {
+    warehouseId: warehouse.id,
+    sku: item.sku,
+    quantity: input.quantity
+  };
+}
+
+export async function deleteInventory(
+  client: PoolClient,
+  input: { warehouseId: string; sku: string }
+) {
+  const warehouse = await getRequiredLockedWarehouse(client, input.warehouseId);
+  const item = await getRequiredItemBySku(client, input.sku);
+  const deleted = await deleteInventoryRecord(client, warehouse.id, item.id);
+  if (!deleted) {
+    throw new ApiError("INVENTORY_NOT_FOUND", "Inventory row was not found.", 404);
+  }
 }
 
 export async function transferInventory(

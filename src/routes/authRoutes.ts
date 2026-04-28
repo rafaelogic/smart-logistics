@@ -1,6 +1,7 @@
 import { Router } from "express";
 import jwt, { type SignOptions } from "jsonwebtoken";
 import { config } from "../config/index.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
 import { ApiError } from "../middlewares/errorMiddleware.js";
 import { loginSchema } from "../validations/schemas.js";
 
@@ -35,4 +36,13 @@ authRouter.post("/token", (request, response, next) => {
   } catch (error) {
     next(error);
   }
+});
+
+authRouter.get("/me", authMiddleware, (request, response) => {
+  response.json({
+    user: {
+      username: request.user?.sub,
+      role: request.user?.role ?? "api-client"
+    }
+  });
 });

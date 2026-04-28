@@ -12,7 +12,7 @@ export async function createWarehouseRecord(input: CreateWarehouseRecordInput) {
   const result = await pool.query(
     `INSERT INTO warehouses (name, location, max_capacity, type)
      VALUES ($1, $2, $3, $4)
-     RETURNING id, name, location, max_capacity AS "maxCapacity", type`,
+     RETURNING id, name, location, max_capacity AS "maxCapacity", type, created_at AS "createdAt"`,
     [input.name, input.location, input.maxCapacity, input.type]
   );
 
@@ -21,13 +21,38 @@ export async function createWarehouseRecord(input: CreateWarehouseRecordInput) {
 
 export async function listActiveWarehouseRecords() {
   const result = await pool.query(
-    `SELECT id, name, location, max_capacity AS "maxCapacity", type
-     FROM warehouses
-     WHERE deleted_at IS NULL
-     ORDER BY name`
+    `SELECT
+       w.id,
+       w.name,
+       w.location,
+       w.max_capacity AS "maxCapacity",
+       w.type,
+       w.created_at AS "createdAt",
+       COALESCE(SUM(inv.quantity), 0)::int AS "currentQuantity"
+     FROM warehouses w
+     LEFT JOIN inventory inv ON inv.warehouse_id = w.id
+     WHERE w.deleted_at IS NULL
+     GROUP BY w.id
+     ORDER BY w.created_at DESC, w.name`
   );
 
   return result.rows;
+}
+
+export async function updateWarehouseRecord(
+  client: Queryable,
+  warehouseId: string,
+  input: CreateWarehouseRecordInput
+) {
+  const result = await client.query(
+    `UPDATE warehouses
+     SET name = $2, location = $3, max_capacity = $4, type = $5, updated_at = now()
+     WHERE id = $1 AND deleted_at IS NULL
+     RETURNING id, name, location, max_capacity AS "maxCapacity", type, created_at AS "createdAt"`,
+    [warehouseId, input.name, input.location, input.maxCapacity, input.type]
+  );
+
+  return result.rows[0] ?? null;
 }
 
 export async function lockActiveWarehouse(client: Queryable, warehouseId: string) {

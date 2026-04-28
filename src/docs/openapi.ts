@@ -45,6 +45,16 @@ export const openApiDocument = {
         }
       }
     },
+    "/auth/me": {
+      get: {
+        security: [{ bearerAuth: [] }],
+        summary: "Return the current authenticated user",
+        responses: {
+          "200": { description: "Authenticated user" },
+          "401": { description: "Invalid or missing token" }
+        }
+      }
+    },
     "/warehouses": {
       post: {
         security: [{ bearerAuth: [] }],
@@ -112,6 +122,79 @@ export const openApiDocument = {
         }
       }
     },
+    "/warehouses/{warehouseId}": {
+      put: {
+        security: [{ bearerAuth: [] }],
+        summary: "Update a warehouse",
+        parameters: [{ name: "warehouseId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name", "location", "maxCapacity", "type"],
+                properties: {
+                  name: { type: "string" },
+                  location: { type: "string" },
+                  maxCapacity: { type: "integer", minimum: 1 },
+                  type: { type: "string", enum: ["STANDARD", "COLD"] }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Warehouse updated" },
+          "422": { description: "Validation or capacity error" }
+        }
+      },
+      delete: {
+        security: [{ bearerAuth: [] }],
+        summary: "Soft delete an empty warehouse",
+        parameters: [{ name: "warehouseId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: {
+          "204": { description: "Warehouse deleted" },
+          "409": { description: "Warehouse is not empty" }
+        }
+      }
+    },
+    "/items/{itemId}": {
+      put: {
+        security: [{ bearerAuth: [] }],
+        summary: "Update an item",
+        parameters: [{ name: "itemId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["name", "sku", "storageRequirement"],
+                properties: {
+                  name: { type: "string" },
+                  sku: { type: "string", pattern: "^[A-Z]{3}-\\d{5}-[A-Z]$" },
+                  storageRequirement: { type: "string", enum: ["STANDARD", "COLD"] }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Item updated" },
+          "422": { description: "Validation error" }
+        }
+      },
+      delete: {
+        security: [{ bearerAuth: [] }],
+        summary: "Soft delete an item without inventory rows",
+        parameters: [{ name: "itemId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        responses: {
+          "204": { description: "Item deleted" },
+          "409": { description: "Item still has inventory" }
+        }
+      }
+    },
     "/inventory/add": {
       post: {
         security: [{ bearerAuth: [] }],
@@ -162,6 +245,46 @@ export const openApiDocument = {
         responses: {
           "200": { description: "Stock transferred" },
           "422": { description: "Business rule failed" }
+        }
+      }
+    },
+    "/inventory/{warehouseId}/{sku}": {
+      put: {
+        security: [{ bearerAuth: [] }],
+        summary: "Set stock quantity for a warehouse SKU",
+        parameters: [
+          { name: "warehouseId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "sku", in: "path", required: true, schema: { type: "string", pattern: "^[A-Z]{3}-\\d{5}-[A-Z]$" } }
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["quantity"],
+                properties: {
+                  quantity: { type: "integer", minimum: 0 }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": { description: "Stock quantity updated" },
+          "422": { description: "Storage or capacity rule failed" }
+        }
+      },
+      delete: {
+        security: [{ bearerAuth: [] }],
+        summary: "Delete a warehouse SKU inventory row",
+        parameters: [
+          { name: "warehouseId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+          { name: "sku", in: "path", required: true, schema: { type: "string", pattern: "^[A-Z]{3}-\\d{5}-[A-Z]$" } }
+        ],
+        responses: {
+          "204": { description: "Inventory row deleted" },
+          "404": { description: "Inventory row not found" }
         }
       }
     },

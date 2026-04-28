@@ -4,7 +4,13 @@ export const skuSchema = z.string().regex(/^[A-Z]{3}-\d{5}-[A-Z]$/, {
   message: "SKU must match ABC-12345-X format"
 });
 
-export const positiveQuantitySchema = z.number().int().positive();
+export const positiveQuantitySchema = z.number({
+  invalid_type_error: "Quantity must be a number"
+}).int("Quantity must be a whole number").positive("Quantity must be greater than 0");
+
+export const nonNegativeQuantitySchema = z.number({
+  invalid_type_error: "Quantity must be a number"
+}).int("Quantity must be a whole number").min(0, "Quantity cannot be negative");
 
 export const addInventorySchema = z.object({
   warehouseId: z.string().uuid(),
@@ -37,10 +43,23 @@ export const createWarehouseSchema = z.object({
   type: z.enum(["STANDARD", "COLD"])
 });
 
-export const createItemSchema = z.object({
+export const updateWarehouseSchema = createWarehouseSchema;
+
+const itemSchema = z.object({
   name: z.string().trim().min(1).max(120),
   sku: skuSchema,
   storageRequirement: z.enum(["STANDARD", "COLD"])
+});
+
+export const createItemSchema = itemSchema.extend({
+  warehouseId: z.string().uuid().optional(),
+  quantity: positiveQuantitySchema.default(1)
+});
+
+export const updateItemSchema = itemSchema;
+
+export const setInventorySchema = z.object({
+  quantity: nonNegativeQuantitySchema
 });
 
 export const uuidParamSchema = z.string().uuid();

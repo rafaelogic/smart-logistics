@@ -5,7 +5,8 @@ import {
   getWarehouseOccupancy,
   listActiveWarehouseRecords,
   lockActiveWarehouse,
-  softDeleteWarehouseRecord
+  softDeleteWarehouseRecord,
+  updateWarehouseRecord
 } from "../repositories/warehouseRepository.js";
 
 export type CreateWarehouseInput = {
@@ -21,6 +22,28 @@ export async function createWarehouse(input: CreateWarehouseInput) {
 
 export async function listWarehouses() {
   return listActiveWarehouseRecords();
+}
+
+export async function updateWarehouse(
+  client: PoolClient,
+  warehouseId: string,
+  input: CreateWarehouseInput
+) {
+  const warehouse = await lockActiveWarehouse(client, warehouseId);
+  if (!warehouse) {
+    throw new ApiError("WAREHOUSE_NOT_FOUND", "Warehouse was not found or is deleted.", 404);
+  }
+
+  const occupancy = await getWarehouseOccupancy(client, warehouse.id);
+  if (input.maxCapacity < occupancy) {
+    throw new ApiError(
+      "INSUFFICIENT_CAPACITY",
+      "Max capacity cannot be lower than current warehouse occupancy.",
+      422
+    );
+  }
+
+  return updateWarehouseRecord(client, warehouse.id, input);
 }
 
 export async function softDeleteWarehouse(client: PoolClient, warehouseId: string) {

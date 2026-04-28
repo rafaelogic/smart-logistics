@@ -1,13 +1,13 @@
 INSERT INTO warehouses (id, name, location, max_capacity, type)
 VALUES
-  ('00000000-0000-0000-0000-000000000101', 'Metro Manila Cold Hub', 'Manila', 1000, 'COLD'),
-  ('00000000-0000-0000-0000-000000000102', 'Cebu Cold Hub', 'Cebu', 1000, 'COLD'),
+  ('00000000-0000-0000-0000-000000000101', 'Metro Manila Distribution', 'Manila', 1000, 'STANDARD'),
+  ('00000000-0000-0000-0000-000000000102', 'Cebu Distribution', 'Cebu', 1000, 'STANDARD'),
   ('00000000-0000-0000-0000-000000000103', 'Davao Cold Hub', 'Davao', 1000, 'COLD'),
-  ('00000000-0000-0000-0000-000000000104', 'Clark Cold Hub', 'Pampanga', 1000, 'COLD'),
+  ('00000000-0000-0000-0000-000000000104', 'Clark Distribution', 'Pampanga', 1000, 'STANDARD'),
   ('00000000-0000-0000-0000-000000000105', 'Iloilo Cold Hub', 'Iloilo', 1000, 'COLD'),
-  ('00000000-0000-0000-0000-000000000106', 'Cagayan Cold Hub', 'Cagayan de Oro', 1000, 'COLD'),
+  ('00000000-0000-0000-0000-000000000106', 'Cagayan Distribution', 'Cagayan de Oro', 1000, 'STANDARD'),
   ('00000000-0000-0000-0000-000000000107', 'Bacolod Cold Hub', 'Bacolod', 1000, 'COLD'),
-  ('00000000-0000-0000-0000-000000000108', 'Batangas Cold Hub', 'Batangas', 1000, 'COLD'),
+  ('00000000-0000-0000-0000-000000000108', 'Batangas Distribution', 'Batangas', 1000, 'STANDARD'),
   ('00000000-0000-0000-0000-000000000109', 'Subic Cold Hub', 'Zambales', 1000, 'COLD'),
   ('00000000-0000-0000-0000-000000000110', 'General Santos Cold Hub', 'General Santos', 1000, 'COLD')
 ON CONFLICT (id)
@@ -58,6 +58,13 @@ DO UPDATE SET
   deleted_at = NULL,
   updated_at = now();
 
+DELETE FROM inventory
+USING warehouses, items
+WHERE inventory.warehouse_id = warehouses.id
+  AND inventory.item_id = items.id
+  AND warehouses.type = 'STANDARD'
+  AND items.storage_requirement = 'COLD';
+
 INSERT INTO inventory (warehouse_id, item_id, quantity)
 SELECT
   warehouse.id,
@@ -65,17 +72,17 @@ SELECT
   ((warehouse.number * item.number) % 7) + 1 AS quantity
 FROM (
   VALUES
-    (1, '00000000-0000-0000-0000-000000000101'::uuid),
-    (2, '00000000-0000-0000-0000-000000000102'::uuid),
-    (3, '00000000-0000-0000-0000-000000000103'::uuid),
-    (4, '00000000-0000-0000-0000-000000000104'::uuid),
-    (5, '00000000-0000-0000-0000-000000000105'::uuid),
-    (6, '00000000-0000-0000-0000-000000000106'::uuid),
-    (7, '00000000-0000-0000-0000-000000000107'::uuid),
-    (8, '00000000-0000-0000-0000-000000000108'::uuid),
-    (9, '00000000-0000-0000-0000-000000000109'::uuid),
-    (10, '00000000-0000-0000-0000-000000000110'::uuid)
-) AS warehouse(number, id)
+    (1, '00000000-0000-0000-0000-000000000101'::uuid, 'STANDARD'),
+    (2, '00000000-0000-0000-0000-000000000102'::uuid, 'STANDARD'),
+    (3, '00000000-0000-0000-0000-000000000103'::uuid, 'COLD'),
+    (4, '00000000-0000-0000-0000-000000000104'::uuid, 'STANDARD'),
+    (5, '00000000-0000-0000-0000-000000000105'::uuid, 'COLD'),
+    (6, '00000000-0000-0000-0000-000000000106'::uuid, 'STANDARD'),
+    (7, '00000000-0000-0000-0000-000000000107'::uuid, 'COLD'),
+    (8, '00000000-0000-0000-0000-000000000108'::uuid, 'STANDARD'),
+    (9, '00000000-0000-0000-0000-000000000109'::uuid, 'COLD'),
+    (10, '00000000-0000-0000-0000-000000000110'::uuid, 'COLD')
+) AS warehouse(number, id, type)
 CROSS JOIN (
   VALUES
     (1, 'RIC-10001-A'),
@@ -110,6 +117,65 @@ CROSS JOIN (
     (30, 'SEA-10030-C')
 ) AS item(number, sku)
 JOIN items seeded_item ON seeded_item.sku = item.sku
+WHERE NOT (warehouse.type = 'STANDARD' AND seeded_item.storage_requirement = 'COLD')
+ON CONFLICT (warehouse_id, item_id)
+DO UPDATE SET
+  quantity = EXCLUDED.quantity,
+  updated_at = now();
+
+INSERT INTO warehouses (id, name, location, max_capacity, type)
+VALUES
+  ('00000000-0000-0000-0000-000000000201', 'Transfer Source Standard', 'Manila', 100, 'STANDARD'),
+  ('00000000-0000-0000-0000-000000000202', 'Transfer Destination Standard', 'Cebu', 50, 'STANDARD'),
+  ('00000000-0000-0000-0000-000000000203', 'Transfer Source Cold', 'Davao', 100, 'COLD'),
+  ('00000000-0000-0000-0000-000000000204', 'Transfer Blocked Standard', 'Clark', 100, 'STANDARD')
+ON CONFLICT (id)
+DO UPDATE SET
+  name = EXCLUDED.name,
+  location = EXCLUDED.location,
+  max_capacity = EXCLUDED.max_capacity,
+  type = EXCLUDED.type,
+  deleted_at = NULL,
+  updated_at = now();
+
+INSERT INTO items (id, name, sku, storage_requirement)
+VALUES
+  ('10000000-0000-0000-0000-000000000201', 'Transfer Test Standard Item', 'TST-90001-A', 'STANDARD'),
+  ('10000000-0000-0000-0000-000000000202', 'Transfer Test Cold Item', 'TCL-90002-C', 'COLD'),
+  ('10000000-0000-0000-0000-000000000203', 'Low Stock Audit Item', 'LOW-90003-A', 'STANDARD')
+ON CONFLICT (sku)
+DO UPDATE SET
+  name = EXCLUDED.name,
+  storage_requirement = EXCLUDED.storage_requirement,
+  deleted_at = NULL,
+  updated_at = now();
+
+DELETE FROM inventory
+WHERE warehouse_id IN (
+  '00000000-0000-0000-0000-000000000201',
+  '00000000-0000-0000-0000-000000000202',
+  '00000000-0000-0000-0000-000000000203',
+  '00000000-0000-0000-0000-000000000204'
+)
+AND item_id IN (
+  SELECT id
+  FROM items
+  WHERE sku IN ('TST-90001-A', 'TCL-90002-C', 'LOW-90003-A')
+);
+
+INSERT INTO inventory (warehouse_id, item_id, quantity)
+SELECT
+  seeded_inventory.warehouse_id,
+  seeded_item.id,
+  seeded_inventory.quantity
+FROM (
+  VALUES
+    ('00000000-0000-0000-0000-000000000201'::uuid, 'TST-90001-A', 40),
+    ('00000000-0000-0000-0000-000000000202'::uuid, 'TST-90001-A', 45),
+    ('00000000-0000-0000-0000-000000000203'::uuid, 'TCL-90002-C', 30),
+    ('00000000-0000-0000-0000-000000000204'::uuid, 'LOW-90003-A', 4)
+) AS seeded_inventory(warehouse_id, sku, quantity)
+JOIN items seeded_item ON seeded_item.sku = seeded_inventory.sku
 ON CONFLICT (warehouse_id, item_id)
 DO UPDATE SET
   quantity = EXCLUDED.quantity,

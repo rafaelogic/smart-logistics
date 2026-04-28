@@ -26,3 +26,9 @@ export async function withTransaction<T>(
     client.release();
   }
 }
+
+export function withLockedCapacityTransaction<T>(run: (client: PoolClient) => Promise<T>) {
+  // Inventory capacity checks lock the touched warehouse rows explicitly with FOR UPDATE.
+  // READ COMMITTED lets the next waiting request re-read occupancy after the first commit.
+  return withTransaction(run, { isolationLevel: "READ COMMITTED" });
+}

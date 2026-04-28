@@ -33,6 +33,21 @@ export async function incrementInventoryQuantity(
   );
 }
 
+export async function setInventoryQuantity(
+  client: Queryable,
+  warehouseId: string,
+  itemId: string,
+  quantity: number
+) {
+  await client.query(
+    `INSERT INTO inventory (warehouse_id, item_id, quantity)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (warehouse_id, item_id)
+     DO UPDATE SET quantity = EXCLUDED.quantity, updated_at = now()`,
+    [warehouseId, itemId, quantity]
+  );
+}
+
 export async function decrementInventoryQuantity(
   client: Queryable,
   warehouseId: string,
@@ -50,6 +65,16 @@ export async function decrementInventoryQuantity(
 
 export async function deleteZeroQuantityInventory(client: Queryable) {
   await client.query("DELETE FROM inventory WHERE quantity = 0");
+}
+
+export async function deleteInventoryRecord(client: Queryable, warehouseId: string, itemId: string) {
+  const result = await client.query(
+    `DELETE FROM inventory
+     WHERE warehouse_id = $1 AND item_id = $2`,
+    [warehouseId, itemId]
+  );
+
+  return (result.rowCount ?? 0) > 0;
 }
 
 export async function getWarehouseInventoryReportRecords(

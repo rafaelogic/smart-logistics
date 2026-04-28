@@ -9,7 +9,11 @@
     "skipLibCheck": true,
     "outDir": "dist",
     "rootDir": "src",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["client/src/*"]
+    }
   },
   "include": ["src/**/*.ts"]
 }

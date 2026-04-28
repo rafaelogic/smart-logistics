@@ -3,9 +3,10 @@ import { withTransaction } from "../database/db.js";
 import {
   createWarehouse,
   listWarehouses,
-  softDeleteWarehouse
+  softDeleteWarehouse,
+  updateWarehouse
 } from "../services/warehouseService.js";
-import { createWarehouseSchema, uuidParamSchema } from "../validations/schemas.js";
+import { createWarehouseSchema, updateWarehouseSchema, uuidParamSchema } from "../validations/schemas.js";
 
 export const warehouseRouter = Router();
 
@@ -23,6 +24,17 @@ warehouseRouter.get("/", async (_request, response, next) => {
   try {
     const warehouses = await listWarehouses();
     response.json({ warehouses });
+  } catch (error) {
+    next(error);
+  }
+});
+
+warehouseRouter.put("/:warehouseId", async (request, response, next) => {
+  try {
+    const warehouseId = uuidParamSchema.parse(request.params.warehouseId);
+    const input = updateWarehouseSchema.parse(request.body);
+    const warehouse = await withTransaction((client) => updateWarehouse(client, warehouseId, input));
+    response.json(warehouse);
   } catch (error) {
     next(error);
   }
