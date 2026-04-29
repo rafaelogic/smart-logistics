@@ -82,6 +82,10 @@ export type InventoryReportItem = {
   sku?: string;
   name?: string;
   quantity?: number;
+  priority?: boolean;
+  recentPriority?: boolean;
+  createdAt?: string;
+  created_at?: string;
   low_stock?: boolean;
   lowStock?: boolean;
 };

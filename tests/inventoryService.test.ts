@@ -36,6 +36,15 @@ async function getQuantity(warehouseId: string, itemId: string) {
   return result.rows[0]?.quantity ?? 0;
 }
 
+async function getPriority(warehouseId: string, itemId: string) {
+  const result = await pool.query<{ priority: boolean }>(
+    "SELECT priority FROM inventory WHERE warehouse_id = $1 AND item_id = $2",
+    [warehouseId, itemId]
+  );
+
+  return result.rows[0]?.priority ?? false;
+}
+
 beforeEach(async () => {
   const db = newDb();
   const pg = db.adapters.createPg();
@@ -67,6 +76,7 @@ beforeEach(async () => {
       warehouse_id UUID NOT NULL REFERENCES warehouses(id),
       item_id UUID NOT NULL REFERENCES items(id),
       quantity INTEGER NOT NULL CHECK (quantity >= 0),
+      priority BOOLEAN NOT NULL DEFAULT false,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       PRIMARY KEY (warehouse_id, item_id)
@@ -201,6 +211,19 @@ describe("addInventory", () => {
       )
     ).rejects.toMatchObject({ error: "INCOMPATIBLE_STORAGE" });
   });
+
+  it("stores priority when adding stock", async () => {
+    await withTestTransaction((client) =>
+      addInventory(client, {
+        warehouseId: coldWarehouse,
+        sku: "RIC-12345-A",
+        quantity: 1,
+        priority: true
+      })
+    );
+
+    expect(await getPriority(coldWarehouse, standardItem)).toBe(true);
+  });
 });
 
 describe("setInventory", () => {
@@ -217,5 +240,18 @@ describe("setInventory", () => {
     );
 
     expect(await getQuantity(standardA, standardItem)).toBe(0);
+  });
+
+  it("updates priority without requiring a quantity change", async () => {
+    await withTestTransaction((client) =>
+      setInventory(client, {
+        warehouseId: standardA,
+        sku: "RIC-12345-A",
+        quantity: 50,
+        priority: true
+      })
+    );
+
+    expect(await getPriority(standardA, standardItem)).toBe(true);
   });
 });

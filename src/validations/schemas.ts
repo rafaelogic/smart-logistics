@@ -15,7 +15,8 @@ export const nonNegativeQuantitySchema = z.number({
 export const addInventorySchema = z.object({
   warehouseId: z.string().uuid(),
   sku: skuSchema,
-  quantity: positiveQuantitySchema
+  quantity: positiveQuantitySchema,
+  priority: z.boolean().optional()
 });
 
 export const transferInventorySchema = z.object({
@@ -59,7 +60,8 @@ export const createItemSchema = itemSchema.extend({
 export const updateItemSchema = itemSchema;
 
 export const setInventorySchema = z.object({
-  quantity: nonNegativeQuantitySchema
+  quantity: nonNegativeQuantitySchema,
+  priority: z.boolean().optional()
 });
 
 export const uuidParamSchema = z.string().uuid();

@@ -56,7 +56,8 @@ async function upsertInventory(
   client: PoolClient,
   warehouseId: string,
   itemId: string,
-  quantityDelta: number
+  quantityDelta: number,
+  priority?: boolean
 ) {
   if (quantityDelta < 0) {
     await decrementInventoryQuantity(client, warehouseId, itemId, Math.abs(quantityDelta));
@@ -64,13 +65,13 @@ async function upsertInventory(
     return;
   }
 
-  await incrementInventoryQuantity(client, warehouseId, itemId, quantityDelta);
+  await incrementInventoryQuantity(client, warehouseId, itemId, quantityDelta, priority);
   await deleteZeroQuantityInventory(client);
 }
 
 export async function addInventory(
   client: PoolClient,
-  input: { warehouseId: string; sku: string; quantity: number }
+  input: { warehouseId: string; sku: string; quantity: number; priority?: boolean }
 ): Promise<InventoryMutationResult> {
   // The warehouse lock serializes competing capacity checks for the same destination.
   const warehouse = await getRequiredLockedWarehouse(client, input.warehouseId);
@@ -86,7 +87,7 @@ export async function addInventory(
     );
   }
 
-  await upsertInventory(client, warehouse.id, item.id, input.quantity);
+  await upsertInventory(client, warehouse.id, item.id, input.quantity, input.priority);
 
   return {
     warehouseId: warehouse.id,
@@ -97,7 +98,7 @@ export async function addInventory(
 
 export async function setInventory(
   client: PoolClient,
-  input: { warehouseId: string; sku: string; quantity: number }
+  input: { warehouseId: string; sku: string; quantity: number; priority?: boolean }
 ): Promise<InventoryMutationResult> {
   const warehouse = await getRequiredLockedWarehouse(client, input.warehouseId);
   const item = await getRequiredItemBySku(client, input.sku);
@@ -110,7 +111,7 @@ export async function setInventory(
     throw new ApiError("INSUFFICIENT_CAPACITY", "Updated quantity exceeds warehouse capacity.", 422);
   }
 
-  await setInventoryQuantity(client, warehouse.id, item.id, input.quantity);
+  await setInventoryQuantity(client, warehouse.id, item.id, input.quantity, input.priority);
   await deleteZeroQuantityInventory(client);
 
   return {

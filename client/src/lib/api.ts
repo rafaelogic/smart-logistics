@@ -188,7 +188,7 @@ export function deleteItem(token: string, itemId: string) {
 
 export function addInventory(
   token: string,
-  input: { warehouseId: string; sku: string; quantity: number }
+  input: { warehouseId: string; sku: string; quantity: number; priority?: boolean }
 ) {
   return api("/inventory/add", {
     token,
@@ -199,12 +199,12 @@ export function addInventory(
 
 export function setInventory(
   token: string,
-  input: { warehouseId: string; sku: string; quantity: number }
+  input: { warehouseId: string; sku: string; quantity: number; priority?: boolean }
 ) {
   return api(`/inventory/${input.warehouseId}/${encodeURIComponent(input.sku)}`, {
     token,
     method: "PUT",
-    body: JSON.stringify({ quantity: input.quantity })
+    body: JSON.stringify({ quantity: input.quantity, priority: input.priority })
   });
 }
 

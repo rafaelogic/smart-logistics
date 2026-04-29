@@ -137,7 +137,7 @@ The test suite covers transfer success, insufficient destination capacity, incom
 
 - `warehouses`: name, location, `max_capacity`, type (`STANDARD` or `COLD`), and `deleted_at` for soft deletes.
 - `items`: name, unique SKU, storage requirement (`STANDARD` or `COLD`), and `deleted_at`.
-- `inventory`: join table tracking quantity per `(warehouse_id, item_id)`.
+- `inventory`: join table tracking quantity and priority per `(warehouse_id, item_id)`.
 
 SKU format is enforced at both API and database level: `^[A-Z]{3}-\d{5}-[A-Z]$`.
 
@@ -150,6 +150,7 @@ SKU format is enforced at both API and database level: `^[A-Z]{3}-\d{5}-[A-Z]$`.
 - Capacity-sensitive inventory routes run under `READ COMMITTED` with warehouse locks, so concurrent requests for the last available slots are serialized: the second request waits, then re-reads occupancy after the first commit.
 - Transfers lock source/destination warehouse rows in stable sorted order to reduce deadlock risk and prevent race-condition overfills.
 - Transfers move inventory by item resolved from the submitted SKU, preventing ghost stock or cross-SKU movement.
+- Inventory report item lists sort priority rows created in the last 24 hours before normal rows.
 - Warehouses can only be soft-deleted when empty.
 - Reports are paginated with `warehousePage` and `warehousesPerPage` for warehouses, plus `warehouseItemPage` and `warehouseItemsPerPage` for each warehouse item list. Both page-size fields max out at 100.
 

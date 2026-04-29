@@ -209,7 +209,8 @@ export const openApiDocument = {
                 properties: {
                   warehouseId: { type: "string", format: "uuid" },
                   sku: { type: "string", pattern: "^[A-Z]{3}-\\d{5}-[A-Z]$" },
-                  quantity: { type: "integer", minimum: 1 }
+                  quantity: { type: "integer", minimum: 1 },
+                  priority: { type: "boolean", default: false }
                 }
               }
             }
@@ -264,7 +265,8 @@ export const openApiDocument = {
                 type: "object",
                 required: ["quantity"],
                 properties: {
-                  quantity: { type: "integer", minimum: 0 }
+                  quantity: { type: "integer", minimum: 0 },
+                  priority: { type: "boolean" }
                 }
               }
             }

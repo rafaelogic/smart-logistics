@@ -22,14 +22,18 @@ export async function incrementInventoryQuantity(
   client: Queryable,
   warehouseId: string,
   itemId: string,
-  quantity: number
+  quantity: number,
+  priority?: boolean
 ) {
   await client.query(
-    `INSERT INTO inventory (warehouse_id, item_id, quantity)
-     VALUES ($1, $2, $3)
+    `INSERT INTO inventory (warehouse_id, item_id, quantity, priority)
+     VALUES ($1, $2, $3, COALESCE($4, false))
      ON CONFLICT (warehouse_id, item_id)
-     DO UPDATE SET quantity = inventory.quantity + EXCLUDED.quantity, updated_at = now()`,
-    [warehouseId, itemId, quantity]
+     DO UPDATE SET
+       quantity = inventory.quantity + EXCLUDED.quantity,
+       priority = COALESCE($4, inventory.priority),
+       updated_at = now()`,
+    [warehouseId, itemId, quantity, priority ?? null]
   );
 }
 
@@ -37,14 +41,18 @@ export async function setInventoryQuantity(
   client: Queryable,
   warehouseId: string,
   itemId: string,
-  quantity: number
+  quantity: number,
+  priority?: boolean
 ) {
   await client.query(
-    `INSERT INTO inventory (warehouse_id, item_id, quantity)
-     VALUES ($1, $2, $3)
+    `INSERT INTO inventory (warehouse_id, item_id, quantity, priority)
+     VALUES ($1, $2, $3, COALESCE($4, false))
      ON CONFLICT (warehouse_id, item_id)
-     DO UPDATE SET quantity = EXCLUDED.quantity, updated_at = now()`,
-    [warehouseId, itemId, quantity]
+     DO UPDATE SET
+       quantity = EXCLUDED.quantity,
+       priority = COALESCE($4, inventory.priority),
+       updated_at = now()`,
+    [warehouseId, itemId, quantity, priority ?? null]
   );
 }
 
@@ -127,11 +135,16 @@ export async function getWarehouseInventoryReportRecords(
            i.sku,
            i.name,
            inv.quantity,
+           inv.priority,
+           inv.created_at AS "createdAt",
+           inv.priority AND inv.created_at >= now() - interval '24 hours' AS "recentPriority",
            inv.quantity < 10 AS low_stock
          FROM inventory inv
          JOIN items i ON i.id = inv.item_id AND i.deleted_at IS NULL
          WHERE inv.warehouse_id = pw.id
-         ORDER BY i.sku
+         ORDER BY
+           CASE WHEN inv.priority AND inv.created_at >= now() - interval '24 hours' THEN 0 ELSE 1 END,
+           i.sku
          LIMIT $3 OFFSET $4
        ) item_rows
      ) paged_items ON TRUE

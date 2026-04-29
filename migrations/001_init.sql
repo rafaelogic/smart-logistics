@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS inventory (
   warehouse_id UUID NOT NULL REFERENCES warehouses(id),
   item_id UUID NOT NULL REFERENCES items(id),
   quantity INTEGER NOT NULL CHECK (quantity >= 0),
+  priority BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (warehouse_id, item_id)
@@ -40,3 +41,7 @@ CREATE INDEX IF NOT EXISTS items_active_sku_idx
 
 CREATE INDEX IF NOT EXISTS inventory_item_id_idx
   ON inventory (item_id);
+
+CREATE INDEX IF NOT EXISTS inventory_recent_priority_idx
+  ON inventory (priority, created_at DESC)
+  WHERE priority = true;
