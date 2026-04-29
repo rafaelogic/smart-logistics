@@ -31,6 +31,9 @@ CREATE TABLE IF NOT EXISTS inventory (
   PRIMARY KEY (warehouse_id, item_id)
 );
 
+ALTER TABLE inventory
+  ADD COLUMN IF NOT EXISTS priority BOOLEAN NOT NULL DEFAULT false;
+
 CREATE INDEX IF NOT EXISTS warehouses_active_name_idx
   ON warehouses (name)
   WHERE deleted_at IS NULL;
